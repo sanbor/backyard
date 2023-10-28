@@ -1,0 +1,13 @@
+{{define "title"}}
+Edit {{ .Title }}
+{{end}}
+
+{{define "body"}}
+<form action="/posts/{{ .ID }}" method="POST">
+    <input type="hidden" name="id" value="{{ .ID }}"/>
+    <input name ="title" value="{{ .Title }}"/><br/>
+    <textarea name="content">{{ .Content }}</textarea><br/>
+    <button type="submit">Submit</button>
+</form>
+<a href="/posts/{{ .ID }}">Cancel</a>
+{{end}}

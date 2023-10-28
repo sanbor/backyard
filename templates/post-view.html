@@ -1,0 +1,12 @@
+{{define "title"}}
+{{ .Title }}
+{{end}}
+
+{{define "body"}}
+<h1>{{ .Title }}</h1>
+<span>Created at: {{ .CreatedAt }}</span>
+<p>
+    {{ .Content }}
+</p>
+<a href="/posts/{{ .ID }}/edit">Edit</a>
+{{end}}

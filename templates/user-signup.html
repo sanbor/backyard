@@ -1,0 +1,12 @@
+{{define "title"}}
+Sign up
+{{end}}
+
+{{define "body"}}
+<form action="/signup" method="POST">
+  <input name="username" /><br /><input
+    name="password"
+    type="password"
+  /><br /><button type="submit">Submit</button>
+</form>
+{{end}}

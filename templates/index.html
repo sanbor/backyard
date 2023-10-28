@@ -1,0 +1,30 @@
+ {{define "title"}}
+    Welcome to Backyard
+ {{end}}
+
+ {{define "body"}}
+    <h1>Welcome to Backyard</h1>
+    {{if not .LoggedIn}}
+        <a href="/login">Login</a>
+        <a href="/signup">Signup</a>
+    {{else}}
+        <a href="/logout">Logout</a>
+        <form action="/post" method="POST">
+            <input type="hidden" name="id" value="{{.UUID}}"/>
+            <input name ="title"/><br/>
+            <textarea name="content"></textarea><br/>
+            <button type="submit">Submit</button>
+        </form>
+    {{end}}
+    <h2>Posts:</h2>
+    <div>
+        {{ range .Posts }}
+            <h2><a href="/posts/{{ .ID }}">{{ .Title }}</a></h2>
+            <span>Created at: {{ .CreatedAt }}</span>
+            <p>
+                {{ .Content }}
+            </p>
+            </div>
+        {{ end }}
+    </div>
+{{end}}

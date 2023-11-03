@@ -13,6 +13,8 @@ import (
 
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"golang.org/x/crypto/acme/autocert"
 
 	_ "modernc.org/sqlite"
 )
@@ -31,14 +33,28 @@ func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c 
 	return tmpl.ExecuteTemplate(w, "base.html", data)
 }
 
+const DEV_ENV = "dev"
+const PRO_ENV = "pro"
+
 func main() {
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = PRO_ENV
+	}
+
 	db, err := setupDB()
 	if err != nil {
 		panic(err)
 	}
+	JWTSecret, err := fetchSecret(env)
+	if err != nil {
+		panic(err)
+	}
 	e := echo.New()
+	e.Use(middleware.Recover())
+	e.Use(middleware.Logger())
 	e.Use(echojwt.WithConfig(echojwt.Config{
-		SigningKey:  []byte("secret"),
+		SigningKey:  []byte(JWTSecret),
 		TokenLookup: "cookie:Authorization",
 		Skipper: func(c echo.Context) bool {
 			if c.Request().Method == http.MethodGet || c.Request().Method == http.MethodOptions || c.Path() == "/login" || c.Path() == "/signup" {
@@ -48,7 +64,13 @@ func main() {
 			return false
 		},
 	}))
-	h := handler.Handler{DB: db}
+
+	h := handler.Handler{
+		DB:           db,
+		JWTSecret:    JWTSecret,
+		EnableSignup: os.Getenv("ENABLE_SIGNUP") == "true",
+		Environment:  env,
+	}
 
 	// Frontend
 	e.GET("/", h.GetPosts)
@@ -80,9 +102,32 @@ func main() {
 	// Fancy error pages
 	e.HTTPErrorHandler = customHTTPErrorHandler
 
-	e.Logger.Fatal(e.Start(":8080"))
+	if env == DEV_ENV {
+		addr := os.Getenv("ADDRESS_LISTEN")
+		if addr == "" {
+			addr = ":8080"
+		}
+		e.Logger.Fatal(e.Start(addr))
+	} else {
+		// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)
+		e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+		if onlyHost := os.Getenv("WHITELIST_HOST"); onlyHost != "" {
+			e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(onlyHost)
+		}
+		e.Pre(middleware.HTTPSRedirect())
+		e.Logger.Fatal(e.StartAutoTLS(":443"))
+	}
 }
-
+func fetchSecret(env string) (string, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" && env == DEV_ENV {
+		secret = "unsecure"
+	}
+	if secret == "" {
+		return "", errors.New("no secret defined")
+	}
+	return secret, nil
+}
 func setupDB() (*sql.DB, error) {
 	dbDriver := os.Getenv("DB_DRIVER")
 	dataSourceName := os.Getenv("DB_URL")

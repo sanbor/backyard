@@ -3,6 +3,7 @@ package handler
 import (
 	"backyard/domain"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -46,7 +47,7 @@ func (h *Handler) Login(c echo.Context) error {
 	if err != nil {
 		return c.HTML(http.StatusBadRequest, "Invalid credentials")
 	}
-	cookie, err := authorizationCookie(user.ID)
+	cookie, err := authorizationCookie(user.ID, h.JWTSecret)
 	if err != nil {
 		return err
 	}
@@ -56,6 +57,10 @@ func (h *Handler) Login(c echo.Context) error {
 
 }
 func (h *Handler) NewUser(c echo.Context) error {
+	if h.Environment != "dev" && !h.EnableSignup {
+		return c.HTML(http.StatusForbidden, "<h1>Forbidden!</h1><p>Sign up has been disabled.</p>")
+	}
+
 	user := domain.User{
 		ID:       uuid.NewString(),
 		Username: c.FormValue("username"),
@@ -91,7 +96,7 @@ func (h *Handler) NewUser(c echo.Context) error {
 		return c.HTML(http.StatusInternalServerError, "User not created")
 	}
 
-	cookie, err := authorizationCookie(user.ID)
+	cookie, err := authorizationCookie(user.ID, h.JWTSecret)
 	if err != nil {
 		return err
 	}
@@ -117,14 +122,16 @@ func (h *Handler) GetLoginForm(c echo.Context) error {
 	return c.Render(http.StatusOK, "user-login.html", nil)
 }
 
-func authorizationCookie(ID string) (*http.Cookie, error) {
+func authorizationCookie(ID string, secret string) (*http.Cookie, error) {
+	if secret == "" {
+		return nil, errors.New("missing secret")
+	}
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["ID"] = ID
 	exp := time.Now().Add(time.Hour * 24 * 7)
 	claims["expiratoin"] = exp.Unix()
-	// Should fetch a real secret
-	signedData, err := token.SignedString([]byte("secret"))
+	signedData, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return nil, err
 	}

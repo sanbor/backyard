@@ -50,6 +50,31 @@ type PostDTO struct {
 	CreatedAt string
 }
 
+func isLoggedIn(c echo.Context, JWTSecret string) bool {
+	if JWTSecret == "" {
+		return false
+	}
+
+	cookie, err := c.Cookie("Authorization")
+	if err == nil {
+		token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
+			// SigningMethodHMAC implements the HMAC-SHA family of signing methods.
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+
+			return []byte(JWTSecret), nil
+		})
+		if err != nil {
+			return false
+		}
+		if _, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *Handler) GetPosts(c echo.Context) error {
 	rows, err := h.DB.Query("SELECT id, title, content, createdAt, updatedAt FROM posts ORDER BY updatedAt DESC")
 	if err != nil {
@@ -69,26 +94,6 @@ func (h *Handler) GetPosts(c echo.Context) error {
 		})
 	}
 
-	loggedIn := false
-	hmacSampleSecret := []byte("secret")
-	cookie, err := c.Cookie("Authorization")
-	if err == nil {
-		token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
-			// Don't forget to validate the alg is what you expect:
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-
-			// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
-			return hmacSampleSecret, nil
-		})
-
-		if _, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			loggedIn = true
-		} else {
-			fmt.Println(err)
-		}
-	}
 	return c.Render(http.StatusOK, "index.html", struct {
 		Posts    []PostDTO
 		UUID     string
@@ -96,7 +101,7 @@ func (h *Handler) GetPosts(c echo.Context) error {
 	}{
 		Posts:    posts,
 		UUID:     uuid.NewString(),
-		LoggedIn: loggedIn,
+		LoggedIn: isLoggedIn(c, h.JWTSecret),
 	})
 }
 
@@ -116,12 +121,18 @@ func (h *Handler) GetByID(c echo.Context) error {
 	p := domain.Post{}
 	row.Scan(&p.ID, &p.Title, &p.Content, &p.CreatedAt, &p.UpdatedAt)
 
-	return c.Render(http.StatusOK, "post-view.html", PostDTO{
-		ID:        p.ID,
-		Title:     sanitizerStrict.Sanitize(p.Title),
-		Content:   safeMd(p.Content),
-		Author:    p.Author,
-		CreatedAt: p.CreatedAt.Format(time.DateOnly),
+	return c.Render(http.StatusOK, "post-view.html", struct {
+		PostDTO
+		LoggedIn bool
+	}{
+		PostDTO{
+			ID:        p.ID,
+			Title:     sanitizerStrict.Sanitize(p.Title),
+			Content:   safeMd(p.Content),
+			Author:    p.Author,
+			CreatedAt: p.CreatedAt.Format(time.DateOnly),
+		},
+		isLoggedIn(c, h.JWTSecret),
 	})
 }
 

@@ -1,3 +1,5 @@
 backyard.db
 .vscode/
 __debug_bin
+*.log
+*.log*

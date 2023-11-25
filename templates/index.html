@@ -13,18 +13,21 @@
             <input type="hidden" name="id" value="{{.UUID}}"/>
             <input name ="title"/><br/>
             <textarea name="content"></textarea><br/>
+            <label>Draft <input type="checkbox" name="draft" checked /></label><br/>
             <button type="submit">Submit</button>
         </form>
     {{end}}
     <h2>Posts:</h2>
     <div>
         {{ range .Posts }}
-            <h2><a href="/posts/{{ .ID }}">{{ .Title }}</a></h2>
-            <span>Created at: {{ .CreatedAt }}</span>
-            <p>
-                {{ .Content }}
-            </p>
-            </div>
+            {{if not .Draft}}
+                <h2><a href="/posts/{{ .ID }}">{{ .Title }}</a></h2>
+                <span>Created at: {{ .CreatedAt }}</span>
+                <p>
+                    {{ .Content }}
+                </p>
+                </div>
+            {{end}}
         {{ end }}
     </div>
 {{end}}

@@ -148,6 +148,7 @@ func setupDB() (*sql.DB, error) {
 		title TEXT,
 		content TEXT,
 		author TEXT,
+        draft BOOLEAN,
 		createdAt DATETIME,
 		updatedAt DATETIME
 	)`)

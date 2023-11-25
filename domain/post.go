@@ -9,6 +9,7 @@ type Post struct {
 	Title     string
 	Content   string
 	Author    string
+	Draft     bool
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

@@ -7,6 +7,7 @@ Edit {{ .Title }}
     <input type="hidden" name="id" value="{{ .ID }}"/>
     <input name ="title" value="{{ .Title }}"/><br/>
     <textarea name="content">{{ .Content }}</textarea><br/>
+    <label>Draft <input type="checkbox" name="draft" {{if .Draft }}checked{{end}} /></label><br/>
     <button type="submit">Submit</button>
 </form>
 <a href="/posts/{{ .ID }}">Cancel</a>

@@ -28,12 +28,14 @@ func (h *Handler) NewPost(c echo.Context) error {
 
 	title := c.FormValue("title")
 	content := c.FormValue("content")
+	draft := c.FormValue("draft") == "on"
+
 	if id != "" && title != "" && content != "" {
-		stmt, err := h.DB.Prepare("INSERT INTO posts (id, title, content, createdAt, updatedAt) VALUES (?,?,?,?,?)")
+		stmt, err := h.DB.Prepare("INSERT INTO posts (id, title, content, draft, createdAt, updatedAt) VALUES (?,?,?,?,?,?)")
 		if err != nil {
 			panic(err)
 		}
-		_, err = stmt.Exec(id, title, content, time.Now().UTC(), time.Now().UTC())
+		_, err = stmt.Exec(id, title, content, draft, time.Now().UTC(), time.Now().UTC())
 		if err != nil {
 			panic(err)
 		}
@@ -46,6 +48,7 @@ type PostDTO struct {
 	ID        string
 	Title     string
 	Content   template.HTML
+	Draft     bool
 	Author    string
 	CreatedAt string
 }
@@ -76,7 +79,7 @@ func isLoggedIn(c echo.Context, JWTSecret string) bool {
 }
 
 func (h *Handler) GetPosts(c echo.Context) error {
-	rows, err := h.DB.Query("SELECT id, title, content, createdAt, updatedAt FROM posts ORDER BY updatedAt DESC")
+	rows, err := h.DB.Query("SELECT id, title, content, draft, createdAt, updatedAt FROM posts ORDER BY updatedAt DESC")
 	if err != nil {
 		panic(err)
 	}
@@ -84,12 +87,13 @@ func (h *Handler) GetPosts(c echo.Context) error {
 	posts := []PostDTO{}
 	for rows.Next() {
 		p := domain.Post{}
-		rows.Scan(&p.ID, &p.Title, &p.Content, &p.CreatedAt, &p.UpdatedAt)
+		rows.Scan(&p.ID, &p.Title, &p.Content, &p.Draft, &p.CreatedAt, &p.UpdatedAt)
 
 		posts = append(posts, PostDTO{
 			ID:        p.ID,
 			Title:     sanitizerStrict.Sanitize(p.Title),
 			Content:   safeMd(p.Content),
+			Draft:     p.Draft,
 			CreatedAt: p.CreatedAt.Format(time.DateOnly),
 		})
 	}
@@ -112,14 +116,14 @@ func (h *Handler) GetByID(c echo.Context) error {
 		return fmt.Errorf("invalid id")
 	}
 
-	row := h.DB.QueryRow("SELECT id, title, content, createdAt, updatedAt FROM posts WHERE id = $1", id)
+	row := h.DB.QueryRow("SELECT id, title, content, draft, createdAt, updatedAt FROM posts WHERE id = $1", id)
 
 	if row.Err() != nil {
 		panic(row.Err().Error())
 	}
 
 	p := domain.Post{}
-	row.Scan(&p.ID, &p.Title, &p.Content, &p.CreatedAt, &p.UpdatedAt)
+	row.Scan(&p.ID, &p.Title, &p.Content, &p.Draft, &p.CreatedAt, &p.UpdatedAt)
 
 	return c.Render(http.StatusOK, "post-view.html", struct {
 		PostDTO
@@ -129,6 +133,7 @@ func (h *Handler) GetByID(c echo.Context) error {
 			ID:        p.ID,
 			Title:     sanitizerStrict.Sanitize(p.Title),
 			Content:   safeMd(p.Content),
+			Draft:     p.Draft,
 			Author:    p.Author,
 			CreatedAt: p.CreatedAt.Format(time.DateOnly),
 		},
@@ -143,18 +148,19 @@ func (h *Handler) GetEditPostForm(c echo.Context) error {
 		return fmt.Errorf("invalid id")
 	}
 
-	row := h.DB.QueryRow("SELECT id, title, content, createdAt, updatedAt from posts WHERE id = $1", id)
+	row := h.DB.QueryRow("SELECT id, title, content, draft, createdAt, updatedAt from posts WHERE id = $1", id)
 
 	if row.Err() != nil {
 		panic(row.Err)
 	}
 
 	p := domain.Post{}
-	row.Scan(&p.ID, &p.Title, &p.Content, &p.CreatedAt, &p.UpdatedAt)
+	row.Scan(&p.ID, &p.Title, &p.Content, &p.Draft, &p.CreatedAt, &p.UpdatedAt)
 	return c.Render(http.StatusOK, "post-edit.html", PostDTO{
 		ID:      p.ID,
 		Title:   p.Title,
 		Content: template.HTML(p.Content),
+		Draft:   p.Draft,
 	})
 }
 
@@ -166,12 +172,14 @@ func (h *Handler) EditPost(c echo.Context) error {
 	}
 	title := c.FormValue("title")
 	content := c.FormValue("content")
+	draft := c.FormValue("draft") == "on"
+
 	if id != "" && title != "" && content != "" {
-		stmt, err := h.DB.Prepare("UPDATE posts SET title = ?, content = ?, updatedAt = ? WHERE id = ?")
+		stmt, err := h.DB.Prepare("UPDATE posts SET title = ?, content = ?, draft = ?,updatedAt = ? WHERE id = ?")
 		if err != nil {
 			panic(err)
 		}
-		_, err = stmt.Exec(title, content, time.Now().UTC(), id)
+		_, err = stmt.Exec(title, content, draft, time.Now().UTC(), id)
 		if err != nil {
 			panic(err)
 		}

@@ -20,12 +20,15 @@
     <h2>Posts:</h2>
     <div>
         {{ range .Posts }}
-            {{if not .Draft}}
+            {{ if or ($.LoggedIn) (not .Draft) }}
                 <h2><a href="/posts/{{ .ID }}">{{ .Title }}</a></h2>
                 <span>Created at: {{ .CreatedAt }}</span>
                 <p>
                     {{ .Content }}
                 </p>
+                {{ if .Draft }}
+                    <label>Draft <input type="checkbox" name="draft" checked disabled /></label><br/>
+                {{ end }}
                 </div>
             {{end}}
         {{ end }}

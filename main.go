@@ -2,20 +2,23 @@ package main
 
 import (
 	"backyard/handler"
+	"database/sql"
 	"errors"
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 
-	"database/sql"
-
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/database/sqlite"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/acme/autocert"
-
 	_ "modernc.org/sqlite"
 )
 
@@ -44,7 +47,11 @@ func main() {
 
 	db, err := setupDB()
 	if err != nil {
-		panic(err)
+		if errors.Is(err, migrate.ErrNoChange) {
+			slog.Info("Database already in latest version")
+		} else {
+			slog.Error("Error during db migration", "error", err)
+		}
 	}
 	JWTSecret, err := fetchSecret(env)
 	if err != nil {
@@ -129,49 +136,39 @@ func fetchSecret(env string) (string, error) {
 	return secret, nil
 }
 func setupDB() (*sql.DB, error) {
+	// PostgresSQL support will come in the future
 	dbDriver := os.Getenv("DB_DRIVER")
 	dataSourceName := os.Getenv("DB_URL")
 
 	if dbDriver == "" {
 		dbDriver = "sqlite"
 	}
-	if dataSourceName == "" {
-		dataSourceName = "./backyard.db"
+
+	var db *sql.DB
+	var err error
+	var driver database.Driver
+	if dbDriver == "sqlite" {
+		if dataSourceName == "" {
+			dataSourceName = "./backyard.db"
+		}
+		db, err = sql.Open(dbDriver, dataSourceName)
+		if err != nil {
+			return nil, err
+		}
+		driver, err = sqlite.WithInstance(db, &sqlite.Config{})
+		if err != nil {
+			return nil, err
+		}
 	}
-	db, err := sql.Open(dbDriver, dataSourceName)
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://db/migrations",
+		dbDriver, driver)
 	if err != nil {
 		return nil, err
 	}
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS posts (
-		id TEXT PRIMARY KEY,
-		title TEXT,
-		content TEXT,
-		author TEXT,
-        draft BOOLEAN,
-		createdAt DATETIME,
-		updatedAt DATETIME
-	)`)
+	err = m.Up()
 
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS users (
-		id TEXT PRIMARY KEY,
-		username TEXT,
-		email TEXT,
-		password TEXT,
-		createdAt DATETIME,
-		updatedAt DATETIME
-	)`)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
+	return db, err
 }
 
 func customHTTPErrorHandler(err error, c echo.Context) {

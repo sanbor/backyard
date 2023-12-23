@@ -85,7 +85,7 @@ func main() {
 	e.GET("/posts/:id/edit", h.GetEditPostForm)
 	e.GET("/signup", h.GetNewUserForm)
 	e.GET("/login", h.GetLoginForm)
-	e.Static("/assets", "assets")
+	e.Static("/static", "assets")
 	e.File("/favicon.ico", "assets/favicon.ico")
 	t := map[string]*template.Template{
 		"index.html":       template.Must(template.ParseFiles("templates/index.html", "templates/base.html")),

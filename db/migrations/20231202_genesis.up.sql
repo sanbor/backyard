@@ -2,7 +2,6 @@ CREATE TABLE IF NOT EXISTS posts (
     id TEXT PRIMARY KEY,
     title TEXT,
     content TEXT,
-    author TEXT,
     draft BOOLEAN,
     createdAt DATETIME,
     updatedAt DATETIME

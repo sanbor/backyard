@@ -45,12 +45,13 @@ func main() {
 		env = PRO_ENV
 	}
 
+	slog.Info("Running database schema migrations...")
 	db, err := setupDB()
 	if err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			slog.Info("Database already in latest version")
+			slog.Info("No database schema migration ran. Database schema already in latest version")
 		} else {
-			slog.Error("Error during db migration", "error", err)
+			slog.Error("Error during database schema migration", "error", err)
 		}
 	}
 	JWTSecret, err := fetchSecret(env)

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log/slog"
 	"net/http"
 	"os"
 
@@ -45,13 +44,13 @@ func main() {
 		env = PRO_ENV
 	}
 
-	slog.Info("Running database schema migrations...")
+	fmt.Println("Running database schema migrations...")
 	db, err := setupDB()
 	if err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			slog.Info("No database schema migration ran. Database schema already in latest version")
+			fmt.Println("No database schema migration ran. Database schema already in latest version")
 		} else {
-			slog.Error("Error during database schema migration", "error", err)
+			fmt.Printf("Error during database schema migration: %v", err)
 		}
 	}
 	JWTSecret, err := fetchSecret(env)

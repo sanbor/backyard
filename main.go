@@ -109,12 +109,12 @@ func main() {
 
 	// Fancy error pages
 	e.HTTPErrorHandler = customHTTPErrorHandler
+	addr := os.Getenv("ADDRESS_LISTEN")
+	if env == DEV_ENV && addr == "" {
+		addr = ":8080"
+	}
 
-	if env == DEV_ENV {
-		addr := os.Getenv("ADDRESS_LISTEN")
-		if addr == "" {
-			addr = ":8080"
-		}
+	if addr != "" {
 		e.Logger.Fatal(e.Start(addr))
 	} else {
 		// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)

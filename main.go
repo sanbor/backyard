@@ -113,16 +113,25 @@ func main() {
 		addr = ":8080"
 	}
 
-	if addr != "" {
+	tls := false
+	if os.Getenv("TLS") == "true" {
+		tls = true
+	}
+
+	if addr != "" && !tls {
 		e.Logger.Fatal(e.Start(addr))
 	} else {
+		fmt.Println("Listening with TLS enabled")
 		// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)
-		e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+		e.AutoTLSManager.Cache = autocert.DirCache("./.cache")
 		if onlyHost := os.Getenv("WHITELIST_HOST"); onlyHost != "" {
 			e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(onlyHost)
 		}
 		e.Pre(middleware.HTTPSRedirect())
-		e.Logger.Fatal(e.StartAutoTLS(":443"))
+		if addr == "" {
+			addr = ":443"
+		}
+		e.Logger.Fatal(e.StartAutoTLS(addr))
 	}
 }
 func fetchSecret(env string) (string, error) {

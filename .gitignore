@@ -3,3 +3,4 @@ backyard.db
 __debug_bin
 *.log
 *.log*
+.*

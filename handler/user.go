@@ -128,9 +128,9 @@ func authorizationCookie(ID string, secret string) (*http.Cookie, error) {
 	}
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
-	claims["ID"] = ID
+	claims["userID"] = ID
 	exp := time.Now().Add(time.Hour * 24 * 7)
-	claims["expiratoin"] = exp.Unix()
+	claims["expiration"] = exp.Unix()
 	signedData, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return nil, err

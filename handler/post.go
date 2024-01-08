@@ -2,6 +2,7 @@ package handler
 
 import (
 	"backyard/domain"
+	"context"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -31,13 +32,35 @@ func (h *Handler) NewPost(c echo.Context) error {
 	draft := c.FormValue("draft") == "on"
 
 	if id != "" && title != "" && content != "" {
+		userID := getUserID(c, h.JWTSecret)
+		if userID == "" {
+			return fmt.Errorf("couldn't get UserID in JWT token")
+		}
+		tx, err := h.DB.BeginTx(context.TODO(), nil)
+		if err != nil {
+			return fmt.Errorf("error in begin transaction: %v", err)
+		}
 		stmt, err := h.DB.Prepare("INSERT INTO posts (id, title, content, draft, createdAt, updatedAt) VALUES (?,?,?,?,?,?)")
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("error preparing statement in table posts: %v", err)
 		}
 		_, err = stmt.Exec(id, title, content, draft, time.Now().UTC(), time.Now().UTC())
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("error executing statement in table posts: %v", err)
+		}
+
+		stmt, err = h.DB.Prepare("INSERT INTO users_posts (user_id, post_id, relation_type, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)")
+		if err != nil {
+			return fmt.Errorf("error preparing statement in table users_posts: %v", err)
+		}
+
+		_, err = stmt.Exec(userID, id, "AUTHOR", time.Now().UTC(), time.Now().UTC())
+		if err != nil {
+			return fmt.Errorf("error executing statement in table users_posts: %v", err)
+		}
+		err = tx.Commit()
+		if err != nil {
+			return fmt.Errorf("error in commit transaction: %v", err)
 		}
 	}
 
@@ -53,6 +76,7 @@ type PostDTO struct {
 	CreatedAt string
 }
 
+// TODO remove in favor of getUserID
 func isLoggedIn(c echo.Context, JWTSecret string) bool {
 	if JWTSecret == "" {
 		return false
@@ -76,6 +100,40 @@ func isLoggedIn(c echo.Context, JWTSecret string) bool {
 		}
 	}
 	return false
+}
+
+func getUserID(c echo.Context, JWTSecret string) string {
+	if JWTSecret == "" {
+		return ""
+	}
+
+	cookie, err := c.Cookie("Authorization")
+	if err == nil {
+		token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
+			// SigningMethodHMAC implements the HMAC-SHA family of signing methods.
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+
+			return []byte(JWTSecret), nil
+		})
+		if err != nil {
+			return ""
+		}
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			expiration, ok := claims["expiration"].(float64)
+			// check if the token has expired
+			if !ok || time.Now().Compare(time.Unix((int64(expiration)), 0)) > 0 {
+				return ""
+			}
+
+			userID, ok := claims["userID"].(string)
+			if ok {
+				return userID
+			}
+		}
+	}
+	return ""
 }
 
 func (h *Handler) GetPosts(c echo.Context) error {

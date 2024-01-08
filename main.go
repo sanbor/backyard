@@ -150,7 +150,7 @@ func setupDB() (*sql.DB, error) {
 	var driver database.Driver
 	if dbDriver == "sqlite" {
 		if dataSourceName == "" {
-			dataSourceName = "./backyard.db"
+			dataSourceName = "./backyard.db?_pragma=foreign_keys(1)"
 		}
 		db, err = sql.Open(dbDriver, dataSourceName)
 		if err != nil {
@@ -167,6 +167,7 @@ func setupDB() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	err = m.Up()
 
 	return db, err

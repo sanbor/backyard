@@ -8,6 +8,6 @@ CREATE TABLE IF NOT EXISTS users_posts (
 	CONSTRAINT users_posts_user_id_FK FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX users_posts_user_id_IDX ON user_post (user_id);
-CREATE INDEX users_posts_post_id_IDX ON user_post (post_id);
-CREATE INDEX users_posts_post_id_user_id_IDX ON user_post (post_id,user_id);
+CREATE INDEX users_posts_user_id_IDX ON users_posts (user_id);
+CREATE INDEX users_posts_post_id_IDX ON users_posts (post_id);
+CREATE INDEX users_posts_post_id_user_id_IDX ON users_posts (post_id,user_id);

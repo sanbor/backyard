@@ -2,16 +2,16 @@ CREATE TABLE IF NOT EXISTS posts (
     id TEXT PRIMARY KEY,
     title TEXT,
     content TEXT,
-    draft BOOLEAN,
-    createdAt DATETIME,
-    updatedAt DATETIME
+    draft BOOLEAN NOT NULL,
+    createdAt DATETIME NOT NULL,
+    updatedAt DATETIME NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
-    username TEXT,
+    username TEXT NOT NULL,
     email TEXT,
-    password TEXT,
-    createdAt DATETIME,
-    updatedAt DATETIME
+    password TEXT NOT NULL,
+    createdAt DATETIME NOT NULL,
+    updatedAt DATETIME NOT NULL
 );

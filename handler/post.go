@@ -58,6 +58,7 @@ func (h *Handler) NewPost(c echo.Context) error {
 		if err != nil {
 			return fmt.Errorf("error executing statement in table users_posts: %v", err)
 		}
+
 		err = tx.Commit()
 		if err != nil {
 			return fmt.Errorf("error in commit transaction: %v", err)
@@ -68,12 +69,18 @@ func (h *Handler) NewPost(c echo.Context) error {
 }
 
 type PostDTO struct {
-	ID        string
-	Title     string
-	Content   template.HTML
-	Draft     bool
-	Author    string
+	ID      string
+	Title   string
+	Content template.HTML
+	Author  string
+	Draft   bool
+	AccessDTO
 	CreatedAt string
+}
+
+type AccessDTO struct {
+	UserID   string
+	Relation string
 }
 
 // TODO remove in favor of getUserID
@@ -137,22 +144,41 @@ func getUserID(c echo.Context, JWTSecret string) string {
 }
 
 func (h *Handler) GetPosts(c echo.Context) error {
-	rows, err := h.DB.Query("SELECT id, title, content, draft, createdAt, updatedAt FROM posts ORDER BY updatedAt DESC")
+	userID := getUserID(c, h.JWTSecret)
+	// The only relation supported for now is author, and only one user can be related to the post
+	rows, err := h.DB.Query(`SELECT posts.id, posts.title, posts.content, posts.draft, posts.createdAt, posts.updatedAt, users_posts.user_id, users_posts.relation_type, users.username FROM posts
+        LEFT JOIN users_posts ON posts.id = users_posts.post_id
+        LEFT JOIN users ON users_posts.user_id = users.id
+        WHERE draft = $1
+        ORDER BY posts.updatedAt DESC`, userID != "")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer rows.Close()
+
 	posts := []PostDTO{}
 	for rows.Next() {
 		p := domain.Post{}
-		rows.Scan(&p.ID, &p.Title, &p.Content, &p.Draft, &p.CreatedAt, &p.UpdatedAt)
+		username := ""
+		p.Access = domain.Access{}
+
+		rows.Scan(&p.ID, &p.Title, &p.Content, &p.Draft, &p.CreatedAt, &p.UpdatedAt, &p.Access.UserID, &p.Access.Relation, &username)
+		author := ""
+		if p.Access.Relation == "AUTHOR" {
+			author = username
+		}
 
 		posts = append(posts, PostDTO{
 			ID:        p.ID,
 			Title:     sanitizerStrict.Sanitize(p.Title),
 			Content:   safeMd(p.Content),
 			Draft:     p.Draft,
+			Author:    author,
 			CreatedAt: p.CreatedAt.Format(time.DateOnly),
+			AccessDTO: AccessDTO{
+				UserID:   p.Access.UserID,
+				Relation: p.Access.Relation,
+			},
 		})
 	}
 
@@ -177,7 +203,7 @@ func (h *Handler) GetByID(c echo.Context) error {
 	row := h.DB.QueryRow("SELECT id, title, content, draft, createdAt, updatedAt FROM posts WHERE id = $1", id)
 
 	if row.Err() != nil {
-		panic(row.Err().Error())
+		return row.Err()
 	}
 
 	p := domain.Post{}
@@ -192,7 +218,6 @@ func (h *Handler) GetByID(c echo.Context) error {
 			Title:     sanitizerStrict.Sanitize(p.Title),
 			Content:   safeMd(p.Content),
 			Draft:     p.Draft,
-			Author:    p.Author,
 			CreatedAt: p.CreatedAt.Format(time.DateOnly),
 		},
 		isLoggedIn(c, h.JWTSecret),
@@ -209,7 +234,7 @@ func (h *Handler) GetEditPostForm(c echo.Context) error {
 	row := h.DB.QueryRow("SELECT id, title, content, draft, createdAt, updatedAt from posts WHERE id = $1", id)
 
 	if row.Err() != nil {
-		panic(row.Err)
+		return row.Err()
 	}
 
 	p := domain.Post{}
@@ -235,11 +260,11 @@ func (h *Handler) EditPost(c echo.Context) error {
 	if id != "" && title != "" && content != "" {
 		stmt, err := h.DB.Prepare("UPDATE posts SET title = ?, content = ?, draft = ?,updatedAt = ? WHERE id = ?")
 		if err != nil {
-			panic(err)
+			return err
 		}
 		_, err = stmt.Exec(title, content, draft, time.Now().UTC(), id)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 

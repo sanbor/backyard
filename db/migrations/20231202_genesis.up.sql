@@ -15,3 +15,4 @@ CREATE TABLE IF NOT EXISTS users (
     createdAt DATETIME NOT NULL,
     updatedAt DATETIME NOT NULL
 );
+-- TODO enforce unique id and username

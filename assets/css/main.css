@@ -21,6 +21,10 @@ strong {
   color: #232323;
 }
 
+em {
+    font-style: italic;
+    color: #232323;
+  }
 
 
 code,

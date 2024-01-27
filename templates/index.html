@@ -22,7 +22,8 @@
         {{ range .Posts }}
             {{ if or ($.LoggedIn) (not .Draft) }}
                 <h2><a href="/posts/{{ .ID }}">{{ .Title }}</a></h2>
-                <span>Created at: {{ .CreatedAt }}</span>
+
+                <em>By {{ .Author }} on {{ .CreatedAt }}</em>
                 <p>
                     {{ .Content }}
                 </p>

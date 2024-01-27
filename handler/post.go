@@ -3,6 +3,7 @@ package handler
 import (
 	"backyard/domain"
 	"context"
+	"database/sql"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -146,11 +147,13 @@ func getUserID(c echo.Context, JWTSecret string) string {
 func (h *Handler) GetPosts(c echo.Context) error {
 	userID := getUserID(c, h.JWTSecret)
 	// The only relation supported for now is author, and only one user can be related to the post
+	skipDrafts := ""
+	if userID == "" {
+		skipDrafts = ` WHERE draft = false `
+	}
 	rows, err := h.DB.Query(`SELECT posts.id, posts.title, posts.content, posts.draft, posts.createdAt, posts.updatedAt, users_posts.user_id, users_posts.relation_type, users.username FROM posts
         LEFT JOIN users_posts ON posts.id = users_posts.post_id
-        LEFT JOIN users ON users_posts.user_id = users.id
-        WHERE draft = $1
-        ORDER BY posts.updatedAt DESC`, userID != "")
+        LEFT JOIN users ON users_posts.user_id = users.id ` + skipDrafts + ` ORDER BY posts.updatedAt DESC`)
 	if err != nil {
 		return err
 	}
@@ -200,15 +203,29 @@ func (h *Handler) GetByID(c echo.Context) error {
 		return fmt.Errorf("invalid id")
 	}
 
-	row := h.DB.QueryRow("SELECT id, title, content, draft, createdAt, updatedAt FROM posts WHERE id = $1", id)
-
+	// The only relation supported for now is author, and only one user can be related to the post
+	row := h.DB.QueryRow(`SELECT posts.id, posts.title, posts.content, posts.draft, posts.createdAt, posts.updatedAt, users_posts.user_id, users_posts.relation_type, users.username FROM posts
+        LEFT JOIN users_posts ON posts.id = users_posts.post_id
+        LEFT JOIN users ON users_posts.user_id = users.id
+        WHERE posts.id = $1`, id)
 	if row.Err() != nil {
 		return row.Err()
 	}
-
 	p := domain.Post{}
-	row.Scan(&p.ID, &p.Title, &p.Content, &p.Draft, &p.CreatedAt, &p.UpdatedAt)
-
+	username := ""
+	p.Access = domain.Access{}
+	err := row.Scan(&p.ID, &p.Title, &p.Content, &p.Draft, &p.CreatedAt, &p.UpdatedAt, &p.Access.UserID, &p.Access.Relation, &username)
+	// Currently it just returns "Error not found"
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("post not found")
+		}
+		return err
+	}
+	author := ""
+	if p.Access.Relation == "AUTHOR" {
+		author = username
+	}
 	return c.Render(http.StatusOK, "post-view.html", struct {
 		PostDTO
 		LoggedIn bool
@@ -218,6 +235,7 @@ func (h *Handler) GetByID(c echo.Context) error {
 			Title:     sanitizerStrict.Sanitize(p.Title),
 			Content:   safeMd(p.Content),
 			Draft:     p.Draft,
+			Author:    author,
 			CreatedAt: p.CreatedAt.Format(time.DateOnly),
 		},
 		isLoggedIn(c, h.JWTSecret),
@@ -230,20 +248,35 @@ func (h *Handler) GetEditPostForm(c echo.Context) error {
 	if len(id) < 36 {
 		return fmt.Errorf("invalid id")
 	}
-
-	row := h.DB.QueryRow("SELECT id, title, content, draft, createdAt, updatedAt from posts WHERE id = $1", id)
-
+	// The only relation supported for now is author, and only one user can be related to the post
+	row := h.DB.QueryRow(`SELECT posts.id, posts.title, posts.content, posts.draft, posts.createdAt, posts.updatedAt, users_posts.user_id, users_posts.relation_type, users.username FROM posts
+        LEFT JOIN users_posts ON posts.id = users_posts.post_id
+        LEFT JOIN users ON users_posts.user_id = users.id
+        WHERE posts.id = $1`, id)
 	if row.Err() != nil {
 		return row.Err()
 	}
-
 	p := domain.Post{}
-	row.Scan(&p.ID, &p.Title, &p.Content, &p.Draft, &p.CreatedAt, &p.UpdatedAt)
+	username := ""
+	p.Access = domain.Access{}
+	err := row.Scan(&p.ID, &p.Title, &p.Content, &p.Draft, &p.CreatedAt, &p.UpdatedAt, &p.Access.UserID, &p.Access.Relation, &username)
+	// Currently it just returns "Error not found"
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("post not found")
+		}
+		return err
+	}
+	author := ""
+	if p.Access.Relation == "AUTHOR" {
+		author = username
+	}
 	return c.Render(http.StatusOK, "post-edit.html", PostDTO{
 		ID:      p.ID,
 		Title:   p.Title,
 		Content: template.HTML(p.Content),
 		Draft:   p.Draft,
+		Author:  author,
 	})
 }
 
@@ -256,6 +289,22 @@ func (h *Handler) EditPost(c echo.Context) error {
 	title := c.FormValue("title")
 	content := c.FormValue("content")
 	draft := c.FormValue("draft") == "on"
+
+	// Check the logged user is the author of the post
+	userID := getUserID(c, h.JWTSecret)
+	if userID == "" {
+		return fmt.Errorf("couldn't get UserID in JWT token")
+	}
+	row := h.DB.QueryRow("select post_id from users_posts where post_id = $1 and user_id = $2 and relation_type = 'AUTHOR' ", id, userID)
+
+	if row.Err() != nil {
+		return row.Err()
+	}
+	temp := ""
+	err := row.Scan(&temp)
+	if err != nil {
+		return fmt.Errorf("not authorized")
+	}
 
 	if id != "" && title != "" && content != "" {
 		stmt, err := h.DB.Prepare("UPDATE posts SET title = ?, content = ?, draft = ?,updatedAt = ? WHERE id = ?")

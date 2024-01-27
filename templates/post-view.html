@@ -3,8 +3,8 @@
 {{end}}
 
 {{define "body"}}
-<h1>{{ .Title }}</h1>
-<span>Created at: {{ .CreatedAt }}</span>
+<h1><a href="/posts/{{ .ID }}">{{ .Title }}</a></h1>
+<em>By {{ .Author }} on {{ .CreatedAt }}</em>
 <p>
     {{ .Content }}
 </p>

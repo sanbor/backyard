@@ -1,18 +1,20 @@
-CREATE TABLE IF NOT EXISTS posts (
-    id TEXT PRIMARY KEY,
-    title TEXT,
-    content TEXT,
-    draft BOOLEAN NOT NULL,
-    createdAt DATETIME NOT NULL,
-    updatedAt DATETIME NOT NULL
+create table if not exists posts (
+    post_id text primary key,
+    title text,
+    content text,
+    draft boolean not null,
+    created_at datetime not null,
+    updated_at datetime not null
 );
 
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-    email TEXT,
-    password TEXT NOT NULL,
-    createdAt DATETIME NOT NULL,
-    updatedAt DATETIME NOT NULL
+create table if not exists users (
+    user_id text primary key,
+    username text not null,
+    email text,
+    password text not null,
+    created_at datetime not null,
+    updated_at datetime not null
 );
--- TODO enforce unique id and username
+
+create unique index usersname_unique_idx on users(username);
+

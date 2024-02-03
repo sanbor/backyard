@@ -1,0 +1,14 @@
+{{define "title"}}
+Instance configuration
+{{end}}
+
+{{define "body"}}
+<h1>Instance configuration</h1>
+<form action="/config" method="POST">
+    <input type="hidden" name="id" value="{{ .ID }}"/>
+    <input name ="title" value="{{ .Title }}"/><br/>
+    <textarea name="description">{{ .Description }}</textarea><br/>
+    <button type="submit">Submit</button>
+</form>
+<a href="/">Cancel</a>
+{{end}}

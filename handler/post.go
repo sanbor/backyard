@@ -41,7 +41,7 @@ func (h *Handler) NewPost(c echo.Context) error {
 		if err != nil {
 			return fmt.Errorf("error in begin transaction: %v", err)
 		}
-		stmt, err := h.DB.Prepare("INSERT INTO posts (id, title, content, draft, createdAt, updatedAt) VALUES (?,?,?,?,?,?)")
+		stmt, err := h.DB.Prepare("insert into posts (post_id, title, content, draft, created_at, updated_at) values (?,?,?,?,?,?)")
 		if err != nil {
 			return fmt.Errorf("error preparing statement in table posts: %v", err)
 		}
@@ -50,7 +50,7 @@ func (h *Handler) NewPost(c echo.Context) error {
 			return fmt.Errorf("error executing statement in table posts: %v", err)
 		}
 
-		stmt, err = h.DB.Prepare("INSERT INTO users_posts (user_id, post_id, relation_type, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)")
+		stmt, err = h.DB.Prepare("insert into users_posts (user_id, post_id, relation_type, created_at, updated_at) values (?, ?, ?, ?, ?)")
 		if err != nil {
 			return fmt.Errorf("error preparing statement in table users_posts: %v", err)
 		}
@@ -149,11 +149,11 @@ func (h *Handler) GetPosts(c echo.Context) error {
 	// The only relation supported for now is author, and only one user can be related to the post
 	skipDrafts := ""
 	if userID == "" {
-		skipDrafts = ` WHERE draft = false `
+		skipDrafts = ` where draft = false `
 	}
-	rows, err := h.DB.Query(`SELECT posts.id, posts.title, posts.content, posts.draft, posts.createdAt, posts.updatedAt, users_posts.user_id, users_posts.relation_type, users.username FROM posts
-        LEFT JOIN users_posts ON posts.id = users_posts.post_id
-        LEFT JOIN users ON users_posts.user_id = users.id ` + skipDrafts + ` ORDER BY posts.updatedAt DESC`)
+	rows, err := h.DB.Query(`select posts.post_id, posts.title, posts.content, posts.draft, posts.created_at, posts.updated_at, users_posts.user_id, users_posts.relation_type, users.username from posts
+        left join users_posts on posts.post_id = users_posts.post_id
+        left join users on users_posts.user_id = users.user_id ` + skipDrafts + ` order by posts.updated_at desc`)
 	if err != nil {
 		return err
 	}
@@ -204,10 +204,10 @@ func (h *Handler) GetByID(c echo.Context) error {
 	}
 
 	// The only relation supported for now is author, and only one user can be related to the post
-	row := h.DB.QueryRow(`SELECT posts.id, posts.title, posts.content, posts.draft, posts.createdAt, posts.updatedAt, users_posts.user_id, users_posts.relation_type, users.username FROM posts
-        LEFT JOIN users_posts ON posts.id = users_posts.post_id
-        LEFT JOIN users ON users_posts.user_id = users.id
-        WHERE posts.id = $1`, id)
+	row := h.DB.QueryRow(`SELECT posts.post_id, posts.title, posts.content, posts.draft, posts.created_at, posts.updated_at, users_posts.user_id, users_posts.relation_type, users.username FROM posts
+        LEFT JOIN users_posts ON posts.post_id = users_posts.post_id
+        LEFT JOIN users ON users_posts.user_id = users.user_id
+        WHERE posts.post_id = $1`, id)
 	if row.Err() != nil {
 		return row.Err()
 	}
@@ -249,10 +249,10 @@ func (h *Handler) GetEditPostForm(c echo.Context) error {
 		return fmt.Errorf("invalid id")
 	}
 	// The only relation supported for now is author, and only one user can be related to the post
-	row := h.DB.QueryRow(`SELECT posts.id, posts.title, posts.content, posts.draft, posts.createdAt, posts.updatedAt, users_posts.user_id, users_posts.relation_type, users.username FROM posts
-        LEFT JOIN users_posts ON posts.id = users_posts.post_id
-        LEFT JOIN users ON users_posts.user_id = users.id
-        WHERE posts.id = $1`, id)
+	row := h.DB.QueryRow(`SELECT posts.post_id, posts.title, posts.content, posts.draft, posts.created_at, posts.updated_at, users_posts.user_id, users_posts.relation_type, users.username FROM posts
+        LEFT JOIN users_posts ON posts.post_id = users_posts.post_id
+        LEFT JOIN users ON users_posts.user_id = users.user_id
+        WHERE posts.post_id = $1`, id)
 	if row.Err() != nil {
 		return row.Err()
 	}
@@ -307,7 +307,7 @@ func (h *Handler) EditPost(c echo.Context) error {
 	}
 
 	if id != "" && title != "" && content != "" {
-		stmt, err := h.DB.Prepare("UPDATE posts SET title = ?, content = ?, draft = ?,updatedAt = ? WHERE id = ?")
+		stmt, err := h.DB.Prepare("update posts set title = ?, content = ?, draft = ?,updated_at = ? where post_id = ?")
 		if err != nil {
 			return err
 		}

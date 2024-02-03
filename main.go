@@ -85,6 +85,7 @@ func main() {
 	e.GET("/posts/:id/edit", h.GetEditPostForm)
 	e.GET("/signup", h.GetNewUserForm)
 	e.GET("/login", h.GetLoginForm)
+	e.GET("/config", h.GetConfigForm)
 	e.Static("/static", "assets")
 	e.File("/favicon.ico", "assets/favicon.ico")
 	t := map[string]*template.Template{
@@ -93,6 +94,7 @@ func main() {
 		"post-edit.html":   template.Must(template.ParseFiles("templates/post-edit.html", "templates/base.html")),
 		"user-login.html":  template.Must(template.ParseFiles("templates/user-login.html", "templates/base.html")),
 		"user-signup.html": template.Must(template.ParseFiles("templates/user-signup.html", "templates/base.html")),
+		"config.html":      template.Must(template.ParseFiles("templates/config.html", "templates/base.html")),
 	}
 
 	e.Renderer = &TemplateRegistry{
@@ -104,6 +106,7 @@ func main() {
 	e.POST("/post", h.NewPost)
 	e.POST("/signup", h.NewUser)
 	e.POST("/login", h.Login)
+	e.POST("/config", h.Config)
 	e.GET("/logout", h.Logout)
 
 	// Fancy error pages

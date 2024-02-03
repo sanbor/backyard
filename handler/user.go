@@ -26,7 +26,7 @@ func (h *Handler) Login(c echo.Context) error {
 	user := new(domain.User)
 	user.Username = formUsername
 
-	row := h.DB.QueryRow("SELECT ID, password, email FROM users WHERE username = $1", user.Username)
+	row := h.DB.QueryRow("select user_id, password, email from users where username = $1", user.Username)
 	if row.Err() != nil {
 		fmt.Println(row.Err().Error())
 		return c.HTML(http.StatusInternalServerError, "Internal server error")
@@ -83,7 +83,7 @@ func (h *Handler) NewUser(c echo.Context) error {
 		return err
 	}
 
-	result, err := h.DB.Exec("INSERT INTO users (id, username, password, createdAt, updatedAt) VALUES ($1, $2, $3, $4, $5)", user.ID, user.Username, hashedPassword, time.Now().UTC(), time.Now().UTC())
+	result, err := h.DB.Exec("insert into users (user_id, username, password, created_at, updated_at) values ($1, $2, $3, $4, $5)", user.ID, user.Username, hashedPassword, time.Now().UTC(), time.Now().UTC())
 	if err != nil {
 		return err
 	}

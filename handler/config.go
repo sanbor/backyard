@@ -17,29 +17,32 @@ func (h *Handler) Config(ctx echo.Context) error {
 	if userID == "" {
 		return ctx.Redirect(http.StatusFound, "/")
 	}
-	row := h.DB.QueryRow("select config_id from config where active = true and admin_user_id = $1 order by updatedAt desc", userID)
+	row := h.DB.QueryRow("select config_id, backyard_version from config where active is true and admin_user_id = $1 order by updated_at desc", userID)
 	oldConfigID := "old-id"
-	err := row.Scan(&oldConfigID)
+	backyardVersion := ""
+	err := row.Scan(&oldConfigID, &backyardVersion)
 	if err != nil {
-		return ctx.Redirect(http.StatusFound, "/")
+		return err
 	}
 	idRegexp := regexp.MustCompilePOSIX("^[a-zA-Z0-9-]+$?")
-	ID := idRegexp.FindString((ctx.Param("id")))
+	ID := idRegexp.FindString((ctx.FormValue("id")))
 	if len(ID) < 36 {
 		return fmt.Errorf("invalid id")
 	}
 	formTitle := ctx.FormValue("title")
 	formDescription := ctx.FormValue("description")
 	c := domain.Config{
-		ID:          ID,
-		Title:       formTitle,
-		Description: formDescription,
+		ID:              ID,
+		Active:          true,
+		BackyardVersion: backyardVersion,
+		Title:           formTitle,
+		Description:     formDescription,
 	}
 	tx, err := h.DB.BeginTx(context.TODO(), nil)
 	if err != nil {
 		return fmt.Errorf("error in begin transaction: %v", err)
 	}
-	stmt, err := h.DB.Prepare("update config set active = false where config_id = ?")
+	stmt, err := h.DB.Prepare("update config set active = false, updated_at = current_timestamp where config_id = ?")
 	if err != nil {
 		return err
 	}
@@ -47,8 +50,8 @@ func (h *Handler) Config(ctx echo.Context) error {
 	if err != nil {
 		return err
 	}
-	stmt, err = h.DB.Prepare(`insert into config
-        values (?,?,?,?,?,?,?,?,?,current_timestamp,current_timestamp`)
+	stmt, err = h.DB.Prepare(`insert into config (config_id, active, backyard_version, title_home, desc_home, image_home, favicon_home, footer_html, admin_user_id)
+        values (?,?,?,?,?,?,?,?,?)`)
 	if err != nil {
 		return err
 	}
@@ -80,19 +83,14 @@ type ConfigDTO struct {
 
 func (h *Handler) GetConfigForm(ctx echo.Context) error {
 	userID := getUserID(ctx, h.JWTSecret)
-	l := ctx.Logger()
-	l.Info("hello", "userId", userID)
 	if userID == "" {
-		// return ctx.Redirect(http.StatusFound, "/")
 		return fmt.Errorf("user id empty")
 	}
 
-	row := h.DB.QueryRow("select config_id, active, backyard_version, title_home, desc_home, image_home, favicon_home, footer_html, admin_user_id, created_at, updated_at from config where active = true and admin_user_id = $1 order by updated_at desc", userID)
-	fmt.Println(userID)
+	row := h.DB.QueryRow("select config_id, active, backyard_version, title_home, desc_home, image_home, favicon_home, footer_html, admin_user_id, created_at, updated_at from config where active is true and admin_user_id = $1 order by updated_at desc", userID)
 	c := domain.Config{}
 	err := row.Scan(&c.ID, &c.Active, &c.BackyardVersion, &c.Title, &c.Description, &c.ImageHome, &c.Favicon, &c.Footer, &c.AdminUserID, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
-		// return ctx.Redirect(http.StatusFound, "/")
 		return err
 	}
 	return ctx.Render(http.StatusOK, "config.html", ConfigDTO{
@@ -108,5 +106,4 @@ func (h *Handler) GetConfigForm(ctx echo.Context) error {
 		CreatedAt:       c.CreatedAt,
 		UpdatedAt:       c.UpdatedAt,
 	})
-
 }

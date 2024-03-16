@@ -1,9 +1,9 @@
- {{define "title"}}
-    Welcome to Backyard
+{{define "title"}}
+    {{ .TitleHome }}
  {{end}}
 
  {{define "body"}}
-    <h1>Welcome to Backyard</h1>
+    <h1>{{template "title" .}}</h1>
     {{if not .LoggedIn}}
         <a href="/login">Login</a>
         <a href="/signup">Signup</a>

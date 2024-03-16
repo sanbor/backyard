@@ -185,14 +185,24 @@ func (h *Handler) GetPosts(c echo.Context) error {
 		})
 	}
 
+	row := h.DB.QueryRow("select config_id, active, backyard_version, title_home, desc_home, image_home, favicon_home, footer_html, admin_user_id, created_at, updated_at from config where active is true order by updated_at desc limit 1")
+
+	config := domain.Config{}
+	err = row.Scan(&config.ID, &config.Active, &config.BackyardVersion, &config.Title, &config.Description, &config.ImageHome, &config.Favicon, &config.Footer, &config.AdminUserID, &config.CreatedAt, &config.UpdatedAt)
+	if err != nil {
+		return err
+	}
+
 	return c.Render(http.StatusOK, "index.html", struct {
-		Posts    []PostDTO
-		UUID     string
-		LoggedIn bool
+		TitleHome string
+		Posts     []PostDTO
+		UUID      string
+		LoggedIn  bool
 	}{
-		Posts:    posts,
-		UUID:     uuid.NewString(),
-		LoggedIn: isLoggedIn(c, h.JWTSecret),
+		TitleHome: config.Title,
+		Posts:     posts,
+		UUID:      uuid.NewString(),
+		LoggedIn:  isLoggedIn(c, h.JWTSecret),
 	})
 }
 

@@ -194,15 +194,17 @@ func (h *Handler) GetPosts(c echo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, "index.html", struct {
-		TitleHome string
-		Posts     []PostDTO
-		UUID      string
-		LoggedIn  bool
+		TitleHome  string
+		FooterHome string
+		Posts      []PostDTO
+		UUID       string
+		LoggedIn   bool
 	}{
-		TitleHome: config.Title,
-		Posts:     posts,
-		UUID:      uuid.NewString(),
-		LoggedIn:  isLoggedIn(c, h.JWTSecret),
+		TitleHome:  config.Title,
+		FooterHome: config.Footer,
+		Posts:      posts,
+		UUID:       uuid.NewString(),
+		LoggedIn:   isLoggedIn(c, h.JWTSecret),
 	})
 }
 

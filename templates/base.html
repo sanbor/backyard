@@ -8,5 +8,10 @@
     <body>
         {{template "body" .}}
     </body>
+    <footer>
+        {{ if hasField . "FooterHome" }}
+            {{  .FooterHome }}
+        {{ end }}
+    </footer>
 </html>
 {{end}}

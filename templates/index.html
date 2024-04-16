@@ -20,6 +20,7 @@
     <h2>Posts:</h2>
     <div>
         {{ range .Posts }}
+        <div>
             {{ if or ($.LoggedIn) (not .Draft) }}
                 <h2><a href="/posts/{{ .ID }}">{{ .Title }}</a></h2>
 

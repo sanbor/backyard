@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
@@ -23,6 +24,17 @@ import (
 
 type TemplateRegistry struct {
 	templates map[string]*template.Template
+}
+
+func hasField(v interface{}, name string) bool {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return false
+	}
+	return rv.FieldByName(name).IsValid()
 }
 
 func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
@@ -88,13 +100,14 @@ func main() {
 	e.GET("/config", h.GetConfigForm)
 	e.Static("/static", "assets")
 	e.File("/favicon.ico", "assets/favicon.ico")
+
 	t := map[string]*template.Template{
-		"index.html":       template.Must(template.ParseFiles("templates/index.html", "templates/base.html")),
-		"post-view.html":   template.Must(template.ParseFiles("templates/post-view.html", "templates/base.html")),
-		"post-edit.html":   template.Must(template.ParseFiles("templates/post-edit.html", "templates/base.html")),
-		"user-login.html":  template.Must(template.ParseFiles("templates/user-login.html", "templates/base.html")),
-		"user-signup.html": template.Must(template.ParseFiles("templates/user-signup.html", "templates/base.html")),
-		"config.html":      template.Must(template.ParseFiles("templates/config.html", "templates/base.html")),
+		"index.html":       template.Must(template.New("").Funcs(template.FuncMap{"hasField": hasField}).ParseFiles("templates/index.html", "templates/base.html")),
+		"post-view.html":   template.Must(template.New("").Funcs(template.FuncMap{"hasField": hasField}).ParseFiles("templates/post-view.html", "templates/base.html")),
+		"post-edit.html":   template.Must(template.New("").Funcs(template.FuncMap{"hasField": hasField}).ParseFiles("templates/post-edit.html", "templates/base.html")),
+		"user-login.html":  template.Must(template.New("").Funcs(template.FuncMap{"hasField": hasField}).ParseFiles("templates/user-login.html", "templates/base.html")),
+		"user-signup.html": template.Must(template.New("").Funcs(template.FuncMap{"hasField": hasField}).ParseFiles("templates/user-signup.html", "templates/base.html")),
+		"config.html":      template.Must(template.New("").Funcs(template.FuncMap{"hasField": hasField}).ParseFiles("templates/config.html", "templates/base.html")),
 	}
 
 	e.Renderer = &TemplateRegistry{

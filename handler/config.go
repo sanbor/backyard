@@ -30,12 +30,14 @@ func (h *Handler) Config(ctx echo.Context) error {
 		return fmt.Errorf("invalid id")
 	}
 	formTitle := ctx.FormValue("title")
+	formFooter := ctx.FormValue("footer")
 	formDescription := ctx.FormValue("description")
 	c := domain.Config{
 		ID:              ID,
 		Active:          true,
 		BackyardVersion: backyardVersion,
 		Title:           formTitle,
+		Footer:          formFooter,
 		Description:     formDescription,
 	}
 	tx, err := h.DB.BeginTx(context.TODO(), nil)

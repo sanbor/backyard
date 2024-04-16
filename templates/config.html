@@ -7,6 +7,7 @@ Instance configuration
 <form action="/config" method="POST">
     <input type="hidden" name="id" value="{{ .ID }}"/>
     <input name ="title" value="{{ .Title }}"/><br/>
+    <input name ="footer" value="{{ .Footer }}"/><br/>
     <textarea name="description">{{ .Description }}</textarea><br/>
     <button type="submit">Submit</button>
 </form>

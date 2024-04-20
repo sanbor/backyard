@@ -3,10 +3,11 @@ Edit {{ .Title }}
 {{end}}
 
 {{define "body"}}
+<h1>Edit Post</h1>
 <form action="/posts/{{ .ID }}" method="POST">
     <input type="hidden" name="id" value="{{ .ID }}"/>
-    <input name ="title" value="{{ .Title }}"/><br/>
-    <textarea name="content">{{ .Content }}</textarea><br/>
+    <input name ="title" placeholder="Title" value="{{ .Title }}"/><br/>
+    <textarea placeholder="Once upon a time..." rows="10" name="content">{{ .Content }}</textarea><br/>
     <label>Draft <input type="checkbox" name="draft" {{if .Draft }}checked{{end}} /></label><br/>
     <button type="submit">Submit</button>
 </form>

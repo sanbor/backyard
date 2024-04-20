@@ -9,10 +9,11 @@
         <a href="/signup">Signup</a>
     {{else}}
         <a href="/logout">Logout</a>
+        <h2>Create Post</h2>
         <form action="/post" method="POST">
             <input type="hidden" name="id" value="{{.UUID}}"/>
-            <input name ="title"/><br/>
-            <textarea name="content"></textarea><br/>
+            <input placeholder="Title" name ="title"/><br/>
+            <textarea placeholder="Once upon a time..." rows="5" name="content"></textarea><br/>
             <label>Draft <input type="checkbox" name="draft" checked /></label><br/>
             <button type="submit">Submit</button>
         </form>
@@ -25,9 +26,9 @@
                 <h2><a href="/posts/{{ .ID }}">{{ .Title }}</a></h2>
 
                 <em>By {{ .Author }} on {{ .CreatedAt }}</em>
-                <p>
+                <div>
                     {{ .Content }}
-                </p>
+                </div>
                 {{ if .Draft }}
                     <label>Draft <input type="checkbox" name="draft" checked disabled /></label><br/>
                 {{ end }}

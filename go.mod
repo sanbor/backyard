@@ -1,6 +1,8 @@
 module backyard
 
-go 1.20
+go 1.21
+
+toolchain go1.22.3
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.0.0
@@ -9,7 +11,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/labstack/echo-jwt/v4 v4.2.0
 	github.com/labstack/echo/v4 v4.11.2
-	github.com/microcosm-cc/bluemonday v1.0.23
+	github.com/microcosm-cc/bluemonday v1.0.26
 	golang.org/x/crypto v0.14.0
 	modernc.org/sqlite v1.22.1
 )

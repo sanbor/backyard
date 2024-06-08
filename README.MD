@@ -29,7 +29,7 @@ When Backyard reaches version 1.0, the MPV is complete and emphasis in quality a
 # Running on development machine
 
 ```
-ENV=dev go run .
+go run . --env=dev
 ```
 
 For automatic reload when code changes:

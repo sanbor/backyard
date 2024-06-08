@@ -4,6 +4,7 @@ import (
 	"backyard/handler"
 	"database/sql"
 	"errors"
+	"flag"
 	"fmt"
 	"html/template"
 	"io"
@@ -48,14 +49,17 @@ func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c 
 }
 
 const DEV_ENV = "dev"
+const STG_ENV = "stg"
 const PRO_ENV = "pro"
 
 func main() {
-	env := os.Getenv("ENV")
-	if env == "" {
-		env = PRO_ENV
+	env := flag.String("env", PRO_ENV, "Specifies if the app is running in a development (dev), testing (stg), or production (pro) environment. This allows to have different settings per environment. Allowed values: dev, stg, pro.")
+	flag.Parse()
+	if *env != DEV_ENV && *env != STG_ENV && *env != PRO_ENV {
+		fmt.Println("Invalid env value. Allowed env values: dev, stg, pro. Current env value:", *env)
+		return
 	}
-
+	fmt.Println("Running in environment:", *env)
 	fmt.Println("Running database schema migrations...")
 	db, err := setupDB()
 	if err != nil {
@@ -65,7 +69,8 @@ func main() {
 			fmt.Printf("Error during database schema migration: %v", err)
 		}
 	}
-	JWTSecret, err := fetchSecret(env)
+
+	JWTSecret, err := fetchSecret(*env)
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +93,7 @@ func main() {
 		DB:           db,
 		JWTSecret:    JWTSecret,
 		EnableSignup: os.Getenv("ENABLE_SIGNUP") == "true",
-		Environment:  env,
+		Environment:  *env,
 	}
 
 	// Frontend
@@ -125,7 +130,7 @@ func main() {
 	// Fancy error pages
 	e.HTTPErrorHandler = customHTTPErrorHandler
 	addr := os.Getenv("ADDRESS_LISTEN")
-	if env == DEV_ENV && addr == "" {
+	if *env == DEV_ENV && addr == "" {
 		addr = ":8080"
 	}
 

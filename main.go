@@ -9,7 +9,6 @@ import (
 	"html/template"
 	"io"
 	"net/http"
-	"os"
 	"reflect"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -52,14 +51,35 @@ const DEV_ENV = "dev"
 const STG_ENV = "stg"
 const PRO_ENV = "pro"
 
+var env string
+var enableSignup bool
+var dbDriver string
+var dataSourceName string
+var secret string
+var address string
+var port int
+var tls bool
+
 func main() {
-	env := flag.String("env", PRO_ENV, "Specifies if the app is running in a development (dev), testing (stg), or production (pro) environment. This allows to have different settings per environment. Allowed values: dev, stg, pro.")
+	flag.StringVar(&env, "env", PRO_ENV, "Specifies if the app is running in a development (dev), testing (stg), or production (pro) environment. This allows to have different settings per environment. Allowed values: dev, stg, pro.")
+	flag.BoolVar(&enableSignup, "enable-signup", false, "Specifies if new users can sign up. Allowed values: true, false.")
+	flag.StringVar(&dbDriver, "db-driver", "sqlite", "Specifies the database driver to use. Allowed values: sqlite, postgres.")
+	flag.StringVar(&dataSourceName, "db-url", "./backyard.db", "Specifies the URL to connect to the database. Allowed values: for sqlite, the file location. For PostgresSQL, a valid connection URL.")
+	flag.StringVar(&secret, "jwt-secret", "", "Specifies the secret to be used by JWT tokens. Allowed values: a string between 32 and 512 characters.")
+	flag.StringVar(&address, "address", "localhost", "Specifies which address the server should listen. Allowed values: empty string to listen any address, localhost to only listen this computer, or a specific hostname.")
+	flag.IntVar(&port, "port", 8080, "Specifies which port the server should listen. Allowed values: unsigned 16-bit integer (0-65535).")
+	flag.BoolVar(&tls, "tls", false, "Specifies if the server should serve secure connections. Allowed values: true, false.")
 	flag.Parse()
-	if *env != DEV_ENV && *env != STG_ENV && *env != PRO_ENV {
-		fmt.Println("Invalid env value. Allowed env values: dev, stg, pro. Current env value:", *env)
+
+	if len(secret) > 0 && (len(secret) < 64 || len(secret) > 1024) {
+		fmt.Println("Invalid JWT secret length. Allowed JWT secret values: a string between 64 and 1024 characters long. Current length: ", len(secret))
 		return
 	}
-	fmt.Println("Running in environment:", *env)
+	if env != DEV_ENV && env != STG_ENV && env != PRO_ENV {
+		fmt.Println("Invalid env value. Allowed env values: dev, stg, pro. Current env value:", env)
+		return
+	}
+	fmt.Println("Running in environment:", env)
 	fmt.Println("Running database schema migrations...")
 	db, err := setupDB()
 	if err != nil {
@@ -70,7 +90,7 @@ func main() {
 		}
 	}
 
-	JWTSecret, err := fetchSecret(*env)
+	JWTSecret, err := fetchSecret(env)
 	if err != nil {
 		panic(err)
 	}
@@ -92,8 +112,8 @@ func main() {
 	h := handler.Handler{
 		DB:           db,
 		JWTSecret:    JWTSecret,
-		EnableSignup: os.Getenv("ENABLE_SIGNUP") == "true",
-		Environment:  *env,
+		EnableSignup: enableSignup,
+		Environment:  env,
 	}
 
 	// Frontend
@@ -129,34 +149,21 @@ func main() {
 
 	// Fancy error pages
 	e.HTTPErrorHandler = customHTTPErrorHandler
-	addr := os.Getenv("ADDRESS_LISTEN")
-	if *env == DEV_ENV && addr == "" {
-		addr = ":8080"
-	}
-
-	tls := false
-	if os.Getenv("TLS") == "true" {
-		tls = true
-	}
-
-	if addr != "" && !tls {
-		e.Logger.Fatal(e.Start(addr))
+	listenAddr := fmt.Sprintf("%s:%d", address, port)
+	if !tls {
+		e.Logger.Fatal(e.Start(listenAddr))
 	} else {
 		fmt.Println("Listening with TLS enabled")
 		// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)
 		e.AutoTLSManager.Cache = autocert.DirCache("./.cache")
-		if onlyHost := os.Getenv("WHITELIST_HOST"); onlyHost != "" {
+		if onlyHost := ("WHos.GetenvITELIST_HOST"); onlyHost != "" {
 			e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(onlyHost)
 		}
 		e.Pre(middleware.HTTPSRedirect())
-		if addr == "" {
-			addr = ":443"
-		}
-		e.Logger.Fatal(e.StartAutoTLS(addr))
+		e.Logger.Fatal(e.StartAutoTLS(listenAddr))
 	}
 }
 func fetchSecret(env string) (string, error) {
-	secret := os.Getenv("JWT_SECRET")
 	if secret == "" && env == DEV_ENV {
 		secret = "unsecure"
 	}
@@ -166,14 +173,6 @@ func fetchSecret(env string) (string, error) {
 	return secret, nil
 }
 func setupDB() (*sql.DB, error) {
-	// PostgresSQL support will come in the future
-	dbDriver := os.Getenv("DB_DRIVER")
-	dataSourceName := os.Getenv("DB_URL")
-
-	if dbDriver == "" {
-		dbDriver = "sqlite"
-	}
-
 	var db *sql.DB
 	var err error
 	var driver database.Driver

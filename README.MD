@@ -2,16 +2,26 @@
 
 Lightweight content management system. Run your very own social network in your backyard.
 
-# Business plan
+# Running on development machine
 
-To finance the development of Backyard, the following business model is in place.
+```
+go run . --env=dev
+```
 
-- There is a hosting offering. The money goes towards covering the cost of hosting services and Backyard development.
-- No lock-in. You can change hosting provider or use your own computer.
-- That's it
+For automatic reload when code changes:
 
-Backyard aims to be a new content platform focused on content.
-The goal for version 1.0 is to focus and functionalities and not federation.
+```
+go install github.com/mitranim/gow@latest
+gow -e=go,mod,html -i=target run . -env=dev
+```
+
+# Running on production
+
+You probably want to disable sign-up to avoid spammers.
+
+```
+go run . -env=pro -enable-signup -address=example.com -port 8080 -jwt-secret=random_1024_string
+```
 
 # Status of the project
 
@@ -26,23 +36,26 @@ great testing coverage, architecture, or security.
 
 When Backyard reaches version 1.0, the MPV is complete and emphasis in quality and other areas will be given.
 
-# Running on development machine
+# Design decisions
 
-```
-go run . --env=dev
-```
+## URL strcture
 
-For automatic reload when code changes:
+Homepage: webbackyard.com
+User profile page: webbackyard.com/{username}
+User posts: webbackyard.com/{username}/posts/{id}
+User images: webbackyard.com/{username}/images/{image_id}
+Sitemap: webbackyard.com/sitemap.xml
+Robots: webbackyard.com/robots.txt
+[Well-known URI](https://en.wikipedia.org/wiki/Well-known_URI): webbackyard.com/.well-known/
+Any other files: webbackyard.com/static/{file}
 
-```
-go install github.com/mitranim/gow@latest
-ENV=dev gow -e=go,mod,html -i=target run .
-```
+# Business plan
 
-# Running on production
+To finance the development of Backyard, the following business model is in place.
 
-You probably want to disable sign-up to avoid spammers.
+- There is a hosting offering. The money goes towards covering the cost of hosting services and Backyard development.
+- No lock-in. You can change hosting provider or use your own computer.
+- That's it
 
-```
-JWT_SECRET=random_password ENABLE_SIGNUP=false WHITELIST_HOST=example.com  go run .
-```
+Backyard aims to be a new content platform focused on content.
+The goal for version 1.0 is to focus and functionalities and not federation.

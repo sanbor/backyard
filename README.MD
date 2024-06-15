@@ -40,14 +40,31 @@ When Backyard reaches version 1.0, the MPV is complete and emphasis in quality a
 
 ## URL strcture
 
-Homepage: webbackyard.com
-User profile page: webbackyard.com/{username}
-User posts: webbackyard.com/{username}/posts/{id}
-User images: webbackyard.com/{username}/images/{image_id}
-Sitemap: webbackyard.com/sitemap.xml
-Robots: webbackyard.com/robots.txt
-[Well-known URI](https://en.wikipedia.org/wiki/Well-known_URI): webbackyard.com/.well-known/
-Any other files: webbackyard.com/static/{file}
+### Visit things
+Visit Homepage: GET webbackyard.com
+Visit User page: GET webbackyard.com/{username}
+Visit User settings: GET webbackyard.com/{username}/settings
+Visit User posts: GET webbackyard.com/{username}/posts/{id}
+Visit User post creation: GET webbackyard.com/{username}/posts/new
+Visit User images: GET webbackyard.com/{username}/images/{image_filename}
+Visit Sitemap: GET webbackyard.com/sitemap.xml
+Visit Robots: GET webbackyard.com/robots.txt
+Visit [Well-known URI](https://en.wikipedia.org/wiki/Well-known_URI): GET webbackyard.com/.well-known/
+Visit Any other files: GET webbackyard.com/static/{file}
+
+### Add things
+Add User: POST webbackyard.com/{username}
+Add User post: POST webbackyard.com/{username}/posts/new
+Add User image: POST webbackyard.com/{username}/images/new
+
+### Delte things
+Delete User: DELETE webbackyard.com/{username}
+Delete User post: DELETE webbackyard.com/{username}/posts/{id}
+Delete User image: DELETE webbackyard.com/{username}/images/{image_filename}
+
+### Change things
+Change User settings: PUT webbackyard.com/{username}/settings
+Change User post: PUT webbackyard.com/{username}/posts/{id}
 
 # Business plan
 
